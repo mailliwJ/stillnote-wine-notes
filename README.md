@@ -1,22 +1,22 @@
 # Stillnote
 
-A mobile-first wine-tasting note prototype. It guides an individual taster through Appearance, Nose, Palate and Conclusions, with an option to add wine details before or after a blind tasting.
+A mobile-first wine tasting notebook with staged, WSET Level 3-style prompts for Appearance, Nose, Palate and Conclusions.
 
-## Prototype flow
+## Use the app
 
-- Choose a single wine note or create a multi-wine tasting session.
-- Name the session and add wines one by one.
-- Enter the wine identity first or taste blind and add details after the tasting.
-- Follow the staged tasting prompts and optional vocabulary hints.
+- Start a single-wine note or a named tasting session with multiple wines.
+- Record the wine identity before tasting or add it after a blind tasting.
+- Move through one tasting stage at a time. Select structured descriptors, explore optional aroma prompts, and add your own words.
+- Add a bottle or label photo, reopen saved notes, or edit them later.
 
-## Current scope
+## Private, on-device storage
 
-This is a static front-end prototype. It does not yet save tasting notes between visits, sync across devices, or provide user accounts. The session count shown during a visit is only a prototype interaction. Do not use it as a store for valuable notes yet.
+Tasting records and resized label photos are stored in this browser on this device using IndexedDB. An unfinished tasting is kept as a local draft so it can be resumed after a reload. There are no accounts or server API, and notes do not sync to other devices. Clearing this browser's site data removes the notes. Export and cloud backup are not implemented yet.
 
 ## Run locally
 
-Open `index.html` in a browser, or serve this folder with any static file server.
+Keep `index.html` and `app.js` in the same folder, then open `index.html` in a modern browser. GitHub Pages deploys these static files without a build step.
 
-## Deploy
+## Future direction
 
-The repository includes a GitHub Actions workflow that publishes the site to GitHub Pages after Pages is configured to use GitHub Actions as its source. The site is static and needs no build step.
+Accounts, cloud backup, syncing, and sharing notes with friends can be added later with a backend. They are intentionally outside the current private, individual-use version.
