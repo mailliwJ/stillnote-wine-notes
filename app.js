@@ -159,7 +159,7 @@
     const active = order[stage];
     $$('.stage-card').forEach(x => x.style.display = x.id === active ? 'block' : 'none');
     $('#setupCard').style.display = 'none'; if ($('#libraryView')) $('#libraryView').style.display = 'none'; $('#columns').style.display = 'grid'; $('#progress').style.display = 'flex';
-    $('#aside').style.display = active === 'appearance' ? '' : 'none'; $('#columns').style.gridTemplateColumns = active === 'appearance' ? 'minmax(0,1fr) 300px' : '1fr';
+    const wideLayout = active === 'appearance' && window.matchMedia('(min-width: 851px)').matches; $('#aside').style.display = wideLayout ? '' : 'none'; $('#columns').style.gridTemplateColumns = wideLayout ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)';
     $('#progress').innerHTML = order.map((id, i) => `<button class="step ${i < stage ? 'done' : i === stage ? 'current' : ''}" data-index="${i}" aria-label="${LABELS[id]}"><span class="num">${i + 1}</span><span class="text">${LABELS[id]}</span></button>`).join('');
     $$('.step').forEach(b => b.onclick = () => showStage(Number(b.dataset.index)));
     const isLast = stage === order.length - 1;
