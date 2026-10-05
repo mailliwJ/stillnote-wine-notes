@@ -288,7 +288,7 @@
   function refreshPhoto() { const photo = $('.photo'); if (!photo) return; if (photoData) { photo.innerHTML = `<img src="${photoData}" alt="Bottle label preview" style="width:64px;height:82px;object-fit:cover;border-radius:7px"><div><strong>Change label photo</strong><small>Stored on this device</small></div>`; } else { photo.innerHTML = '<div class="photoicon">＋</div><div><strong>Add a label photo</strong><small>Take a photo or choose from library</small></div>'; } }
   function setupLibrary() {
     $$('.rail .nav').forEach(item => item.addEventListener('click', () => { const view = item.dataset.view; if (view === 'overview') showDashboard(); else if (view === 'new') resetToSetup(); else showLibrary(view); }));
-    $$('.mobilebar > div').forEach((item, i) => item.addEventListener('click', () => { $$('.mobilebar > div').forEach(x => x.classList.remove('on')); item.classList.add('on'); if (i === 0) resetToSetup(); else showLibrary(i === 2 ? 'sessions' : 'notes'); }));
+    $$('.mobilebar > div').forEach((item, i) => item.addEventListener('click', () => { $$('.mobilebar > div').forEach(x => x.classList.remove('on')); item.classList.add('on'); const view = item.dataset.nav; if (view === 'home') showDashboard(); else if (view === 'new') resetToSetup(); else showLibrary(view); }));
     $$('.rail .wineitem').forEach(item => item.remove());
   }
   function bindPills() {
