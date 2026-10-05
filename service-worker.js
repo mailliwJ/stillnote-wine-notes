@@ -1,5 +1,5 @@
-const CACHE = 'stillnote-shell-v3';
-const APP_FILES = ['./', './index.html', './app.js?v=3', './manifest.webmanifest', './stillnote.svg', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'stillnote-shell-v4';
+const APP_FILES = ['./', './index.html', './app.js?v=4', './manifest.webmanifest', './stillnote.svg', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_FILES)).then(() => self.skipWaiting()));
 });
