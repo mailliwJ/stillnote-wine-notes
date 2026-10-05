@@ -25,6 +25,70 @@
   let mode = 'single', timing = 'before', order = [], stage = 0, currentSession = null, edit = null, photoData = '';
   const sessionBadge = text => { $('.session').innerHTML = `<span></span>${safe(text)}`; };
   const toast = message => { const el = $('#toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200); };
+  const primaryHints = {
+    Fruit: 'lemon, lime, grapefruit, apple, pear, peach, apricot, berries, cherry, tropical fruit',
+    Floral: 'blossom, rose, violet', Herbal: 'grass, fresh herbs, leaf, green pepper',
+    Spice: 'pepper, mint, liquorice', Oak: 'Oak-associated notes are in the independent winemaking prompts.',
+    Earthy: 'Earthy or mineral-like impressions; describe what you notice in your own words.',
+    Other: 'Use your own description for aromas outside these prompts.'
+  };
+  const processHints = {
+    Secondary: { 'Yeast and lees': 'bread, yeast, biscuit, pastry', 'Malolactic fermentation': 'butter, cream, yoghurt', 'Oak ageing': 'vanilla, toast, clove, cedar, smoke, coconut' },
+    Tertiary: { 'Fruit development': 'dried fruit, marmalade, prune, fig', 'Bottle age': 'dried flowers, mushroom, forest floor, leather, tobacco', 'Oxidative development': 'nuts, honey, caramel, dried fruit' }
+  };
+  const wineColors = {
+    white: [['Lemon-green', '#cbd58b'], ['Lemon', '#eee4aa'], ['Gold', '#c9a343'], ['Amber', '#d6a65f'], ['Brown', '#98704c']],
+    rose: [['Pink', '#e9b3aa'], ['Pink-orange', '#df927c'], ['Orange', '#d77950']],
+    red: [['Purple', '#6c3151'], ['Ruby', '#9b3948'], ['Garnet', '#742b34'], ['Tawny', '#ad7654']]
+  };
+  function setupColorPalette() {
+    const palette = $('#palette'); if (!palette) return;
+    const setColor = (name, color, button) => {
+      $$('.swatch', palette).forEach(item => item.classList.toggle('selected', item === button));
+      $('#colorName').textContent = name;
+      $('#glass').style.background = `linear-gradient(to top,${color} 0 47%,transparent 48%)`;
+    };
+    const draw = family => {
+      const colors = wineColors[family] || wineColors.white;
+      palette.replaceChildren(...colors.map(([name, color], index) => {
+        const swatch = document.createElement('button'); swatch.className = `swatch${index === 0 ? ' selected' : ''}`;
+        swatch.type = 'button'; swatch.title = name; swatch.setAttribute('aria-label', name); swatch.style.background = color;
+        swatch.addEventListener('click', () => setColor(name, color, swatch)); return swatch;
+      }));
+      const [name, color] = colors[0]; setColor(name, color, palette.firstElementChild);
+      $('.glasslabel').textContent = family === 'rose' ? 'Rosé wine' : family === 'red' ? 'Red wine' : 'White wine';
+    };
+    $$('#wineTypes .pill').forEach(button => button.addEventListener('click', () => {
+      window.stillnoteFamily = button.dataset.family;
+      draw(window.stillnoteFamily);
+    }));
+    window.stillnoteFamily = 'white'; draw('white');
+  }
+  function updateVocabulary(stage) {
+    const group = $(`[data-vocab="${stage}"]`), box = $(`#${stage}Hints`);
+    if (!group || !box) return;
+    const families = $$('.pill.selected', group).map(x => x.textContent.trim());
+    const primary = families.length ? families.map(family => {
+      const terms = primaryHints[family] || primaryHints.Other;
+      return `<div class="hintgroup"><b>${safe(family)}</b><br>${safe(terms)}<br>${terms.split(', ').map(term => `<button class="example" type="button" data-term="${safe(term)}">${safe(term)}</button>`).join('')}</div>`;
+    }).join('') : '<div class="descriptor">Choose any primary families to browse grape and growing-condition examples.</div>';
+    const termsGroup = (items) => Object.entries(items).map(([label, terms]) => `<div class="hintgroup"><b>${safe(label)}</b><br>${safe(terms)}<br>${terms.split(', ').map(term => `<button class="example" type="button" data-term="${safe(term)}">${safe(term)}</button>`).join('')}</div>`).join('');
+    box.innerHTML = `<details class="aroma-stage primary-stage" open><summary>Primary · grape and growing conditions</summary>${primary}</details><details class="aroma-stage"><summary>Secondary · fermentation and winemaking</summary><p>These processes can add aromas alongside any primary family.</p>${termsGroup(processHints.Secondary)}</details><details class="aroma-stage"><summary>Tertiary · ageing and bottle development</summary><p>Ageing aromas can accompany primary and secondary notes.</p>${termsGroup(processHints.Tertiary)}</details><div class="descriptor">Tap examples to add them to your note. They are prompts, not a checklist.</div>`;
+    box.querySelectorAll('.example').forEach(button => button.addEventListener('click', () => {
+      const field = stage === 'nose' ? $('#nose textarea') : $('#palateNotes');
+      if (!field) return;
+      const terms = field.value.split(/,\s*/).filter(Boolean), term = button.dataset.term;
+      if (terms.includes(term)) terms.splice(terms.indexOf(term), 1); else terms.push(term);
+      field.value = terms.join(', '); button.classList.toggle('picked', terms.includes(term)); field.dispatchEvent(new Event('input', { bubbles: true }));
+    }));
+  }
+  function setupVocabulary() {
+    $$('[data-vocab]').forEach(group => {
+      const stageName = group.dataset.vocab;
+      updateVocabulary(stageName);
+      group.addEventListener('click', event => { if (event.target.closest('.pill')) setTimeout(() => updateVocabulary(stageName), 0); });
+    });
+  }
   const getWine = () => {
     const data = {};
     for (const id of STAGES) {
@@ -82,7 +146,7 @@
       colorButton?.click();
     }
     refreshPhoto();
-    $$('[data-vocab]').forEach(g => g.dispatchEvent(new Event('click')));
+    $$('[data-vocab]').forEach(g => updateVocabulary(g.dataset.vocab));
   };
   function draftPayload() { return { mode, timing, order, stage, currentSession, edit, wine: getWine(), savedAt: Date.now() }; }
   function saveDraft() {
@@ -204,8 +268,16 @@
     $$('.rail .wineitem').forEach(item => item.remove());
   }
   function bindPills() {
-    // Existing design's selection handler is kept; this adds keyboard semantics and avoids form submits.
+    // Selection behavior belongs to the app, so the prototype script is not required.
     $$('button').forEach(b => { if (!b.hasAttribute('type')) b.type = 'button'; });
+    document.addEventListener('click', event => {
+      const pill = event.target.closest('.pill');
+      if (!pill) return;
+      const group = pill.closest('.selects');
+      if (group && !group.hasAttribute('data-multi')) {
+        $$('.pill', group).forEach(item => item.classList.toggle('selected', item === pill));
+      } else pill.classList.toggle('selected');
+    });
     $$('#modeChoices .pill').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; $('#sessionNameRow').style.display = mode === 'session' ? 'grid' : 'none'; }));
     $$('#identityTiming .pill').forEach(b => b.addEventListener('click', () => { timing = b.dataset.timing; }));
     $('#begin').onclick = begin;
@@ -216,11 +288,29 @@
     toggle.onclick = toggleGuidance; toggle.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleGuidance(); } };
     const current = $('#hint'); if (current) current.style.display = '';
   }
+  function setupInstall() {
+    let installEvent = null;
+    const button = $('#installApp');
+    window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installEvent = event; });
+    button?.addEventListener('click', async () => {
+      if (installEvent) {
+        installEvent.prompt();
+        await installEvent.userChoice;
+        installEvent = null;
+        return;
+      }
+      const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      toast(isAppleMobile ? 'In Safari, tap Share, then Add to Home Screen.' : 'Open your browser menu and choose Install app or Add to Home screen.');
+    });
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('service-worker.js').catch(() => toast('Offline setup could not start. Notes still save on this device.'));
+    }
+  }
   async function init() {
     window.stillnoteFamily = 'white';
     // Track the wine colour family selected by the visual swatches.
     $$('#wineTypes .pill').forEach(b => b.addEventListener('click', () => { window.stillnoteFamily = b.dataset.family; }));
-    createPhotoControl(); setupLibrary(); bindPills();
+    createPhotoControl(); setupColorPalette(); setupLibrary(); bindPills(); setupVocabulary(); setupInstall();
     try {
       await openDB();
       const draft = localStorage.getItem('stillnote-draft');

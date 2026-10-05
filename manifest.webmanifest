@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Stillnote — Wine Tasting Notes",
+  "short_name": "Stillnote",
+  "description": "Private, guided wine tasting notes inspired by WSET Level 3.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f6f0",
+  "theme_color": "#f7f6f0",
+  "icons": [
+    { "src": "stillnote.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
