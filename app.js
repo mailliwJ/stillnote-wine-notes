@@ -207,16 +207,40 @@
     panel.innerHTML = `<div class="eyebrow">Saved privately on this device</div><h2>${safe(message)}</h2><p class="sub">Your note stays in this browser. It won’t sync to other devices.</p><div class="actions" style="margin-top:18px">${buttons}</div>`;
   }
   function resetToSetup() {
-    $('#donePanel')?.remove(); if ($('#libraryView')) $('#libraryView').style.display = 'none'; $('#setupCard').style.display = 'block'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none';
+    $('#donePanel')?.remove(); $('#dashboard').style.display = 'none'; if ($('#libraryView')) $('#libraryView').style.display = 'none'; $('#setupCard').style.display = 'block'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none'; $('.crumb').innerHTML = 'Tastings　/　<b>New tasting</b>'; $('.heading h1').textContent = 'Let’s taste something.'; $('.heading .sub').textContent = 'Start with what you can see. The rest can wait.';
     restoreWine(null); order = []; mode = 'single'; timing = 'before'; currentSession = null; sessionBadge('New tasting');
     $$('#modeChoices .pill').forEach(x => x.classList.toggle('selected', x.dataset.mode === 'single'));
     $$('#identityTiming .pill').forEach(x => x.classList.toggle('selected', x.dataset.timing === 'before'));
     $('#sessionNameRow').style.display = 'none'; $('#sessionName').value = ''; $('#donePanel')?.remove(); window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  
+  async function showDashboard() {
+    $('#donePanel')?.remove(); $('#setupCard').style.display = 'none'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none'; $('#aside').style.display = 'none';
+    if ($('#libraryView')) $('#libraryView').style.display = 'none';
+    const dashboard = $('#dashboard'); dashboard.style.display = 'block';
+    $('.crumb').innerHTML = 'Tastings　/　<b>Home</b>'; $('.heading h1').textContent = 'Your tasting journal'; $('.heading .sub').textContent = 'A little record of the wines you’ve explored.';
+    $$('.rail .nav').forEach(x => x.classList.toggle('active', x.dataset.view === 'overview'));
+    $$('.mobilebar > div').forEach(x => x.classList.toggle('on', x.dataset.nav === 'home'));
+    const records = (await allRecords()).sort((a, b) => b.updatedAt - a.updatedAt);
+    const wines = records.flatMap(record => (record.wines || []).map((wine, index) => ({ record, wine, index })));
+    const sessions = records.filter(record => record.type === 'session');
+    const regions = new Set(wines.map(({ wine }) => wine['wine-details']?.fields?.['Country or region']).filter(Boolean));
+    const draft = (() => { try { const value = JSON.parse(localStorage.getItem('stillnote-draft') || 'null'); return value?.wine && value.savedAt && Date.now() - value.savedAt < 30 * 86400000 ? value : null; } catch { return null; } })();
+    const resumeStage = LABELS[draft?.order?.[draft.stage] || 'appearance'] || 'tasting';
+    dashboard.innerHTML = '<section class="dash-welcome"><div><div class="eyebrow">Your private cellar</div><h2>Every glass has a story.</h2><p class="sub">Keep track of the wines you’ve tasted and the details you want to remember.</p></div><button class="btn primary" id="dashNew">Start a tasting　＋</button></section>' +
+      (draft ? '<section class="card dash-resume"><div><div class="eyebrow">In progress</div><strong>Resume your ' + safe(resumeStage.toLowerCase()) + ' notes</strong><div class="sub">Your unfinished tasting is saved on this device.</div></div><button class="btn" id="dashResume">Resume tasting　→</button></section>' : '') +
+      '<section class="dash-stats" aria-label="Your tasting stats"><article class="card dash-stat"><span>Wines tried</span><strong>' + wines.length + '</strong><span>Across your notes and sessions</span></article><article class="card dash-stat"><span>Tasting sessions</span><strong>' + sessions.length + '</strong><span>' + sessions.reduce((sum, session) => sum + (session.wines?.length || 0), 0) + ' wines tasted together</span></article><article class="card dash-stat"><span>Places explored</span><strong>' + regions.size + '</strong><span>' + (regions.size ? 'Different regions in your notes' : 'Add a region to your wine details') + '</span></article></section>' +
+      '<div class="dash-section-head"><h2>Recently tasted</h2><button id="dashAllNotes">See all notes　→</button></div>' +
+      (wines.length ? '<section class="dash-recent">' + wines.slice(0, 4).map(({ record, wine, index }) => { const region = wine['wine-details']?.fields?.['Country or region']; const vintage = wine['wine-details']?.fields?.Vintage; const color = wine.appearance?.colorFamily === 'white' ? '#c6ae5f' : wine.appearance?.colorFamily === 'rose' ? '#cf8e86' : '#80414c'; return '<article class="card dash-wine" data-record="' + safe(record.id) + '" data-wine="' + index + '" tabindex="0"><span class="dash-color"><i class="dash-dot" style="background:' + color + '"></i>' + safe(wine.appearance?.color || wine.appearance?.colorFamily || 'Tasting note') + '</span><h3>' + safe(wine.name || 'Untitled wine') + '</h3><p>' + safe([region, vintage].filter(Boolean).join(' · ') || 'Wine tasting note') + '<br>' + safe(dateText(record.updatedAt || record.createdAt)) + '</p></article>'; }).join('') + '</section>' : '<section class="card dash-empty"><h3>Your journal starts with a first tasting.</h3><p class="sub">Record a wine on its own or create a session to taste several wines together. Notes stay private on this device.</p><button class="btn primary" id="dashFirst">Begin your first tasting　→</button></section>') +
+      (sessions.length ? '<section class="card dash-session"><div><h3>Last tasting session</h3><p>' + safe(sessions[0].name) + ' · ' + (sessions[0].wines?.length || 0) + ' ' + ((sessions[0].wines?.length || 0) === 1 ? 'wine' : 'wines') + ' · ' + safe(dateText(sessions[0].updatedAt || sessions[0].createdAt)) + '</p></div><button class="btn" id="dashSessions">View sessions</button></section>' : '');
+    $('#dashNew').onclick = resetToSetup; $('#dashFirst')?.addEventListener('click', resetToSetup); $('#dashAllNotes').onclick = () => showLibrary('notes'); $('#dashSessions')?.addEventListener('click', () => showLibrary('sessions'));
+    $('#dashResume')?.addEventListener('click', () => { mode = draft.mode || 'single'; timing = draft.timing || 'before'; order = draft.order?.length ? draft.order : makeOrder(); stage = draft.stage || 0; currentSession = draft.currentSession || null; edit = draft.edit || null; restoreWine(draft.wine); showStage(stage); });
+    $$('.dash-wine').forEach(card => { const open = () => showRecord(card.dataset.record); card.addEventListener('click', open); card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } }); });
+  }
   function getLibraryView() { let view = $('#libraryView'); if (!view) { view = document.createElement('section'); view.id = 'libraryView'; view.className = 'library-view'; $('#stageNav').before(view); } return view; }
   async function showLibrary(filter = 'notes') {
     $('#donePanel')?.remove(); $('#setupCard').style.display = 'none'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none'; $('#aside').style.display = 'none';
-    const view = getLibraryView(); view.style.display = 'block';
+    $('#dashboard').style.display = 'none'; $('.crumb').innerHTML = 'Tastings　/　<b>' + (filter === 'sessions' ? 'Sessions' : 'Notes') + '</b>'; $('.heading h1').textContent = filter === 'sessions' ? 'Tasting sessions' : 'My tasting notes'; $('.heading .sub').textContent = 'Saved privately on this device.'; $$('.rail .nav').forEach(x => x.classList.toggle('active', x.dataset.view === filter)); $$('.mobilebar > div').forEach(x => x.classList.toggle('on', x.dataset.nav === filter)); const view = getLibraryView(); view.style.display = 'block';
     const records = (await allRecords()).sort((a, b) => b.updatedAt - a.updatedAt), filtered = records.filter(r => filter === 'all' || (filter === 'sessions' ? r.type === 'session' : r.type === 'single'));
     view.replaceChildren();
     const header = document.createElement('div'); header.className = 'library-head';
@@ -237,7 +261,7 @@
   }
   async function showRecord(id) {
     const record = (await allRecords()).find(x => x.id === id); if (!record) return showLibrary('notes');
-    const view = getLibraryView(); view.replaceChildren(); view.style.display = 'block';
+    $('#dashboard').style.display = 'none'; $('#setupCard').style.display = 'none'; $('.heading h1').textContent = record.type === 'session' ? 'Tasting session' : 'Tasting note'; $('.heading .sub').textContent = 'Your notes, kept private on this device.'; const view = getLibraryView(); view.replaceChildren(); view.style.display = 'block';
     const back = document.createElement('button'); back.className = 'btn'; back.textContent = '← Back to notes'; back.onclick = () => showLibrary(record.type === 'session' ? 'sessions' : 'notes'); view.append(back);
     const heading = document.createElement('div'); heading.className = 'library-head'; heading.innerHTML = `<div><div class="eyebrow">${record.type === 'session' ? 'Tasting session' : 'Wine tasting note'}</div><h1>${safe(record.type === 'session' ? record.name : record.wines?.[0]?.name || record.name)}</h1><p class="sub">${safe(dateText(record.updatedAt || record.createdAt))} · private to you</p></div>`; view.append(heading);
     (record.wines || []).forEach((wine, i) => {
@@ -263,7 +287,7 @@
   }
   function refreshPhoto() { const photo = $('.photo'); if (!photo) return; if (photoData) { photo.innerHTML = `<img src="${photoData}" alt="Bottle label preview" style="width:64px;height:82px;object-fit:cover;border-radius:7px"><div><strong>Change label photo</strong><small>Stored on this device</small></div>`; } else { photo.innerHTML = '<div class="photoicon">＋</div><div><strong>Add a label photo</strong><small>Take a photo or choose from library</small></div>'; } }
   function setupLibrary() {
-    $$('.rail .nav').forEach(item => item.addEventListener('click', () => { $$('.rail .nav').forEach(x => x.classList.remove('active')); item.classList.add('active'); const view = item.dataset.view; if (view === 'new') resetToSetup(); else showLibrary(view === 'overview' ? 'all' : view); }));
+    $$('.rail .nav').forEach(item => item.addEventListener('click', () => { const view = item.dataset.view; if (view === 'overview') showDashboard(); else if (view === 'new') resetToSetup(); else showLibrary(view); }));
     $$('.mobilebar > div').forEach((item, i) => item.addEventListener('click', () => { $$('.mobilebar > div').forEach(x => x.classList.remove('on')); item.classList.add('on'); if (i === 0) resetToSetup(); else showLibrary(i === 2 ? 'sessions' : 'notes'); }));
     $$('.rail .wineitem').forEach(item => item.remove());
   }
@@ -322,7 +346,7 @@
         }
       }
       const records = await allRecords(); const recent = records.sort((a,b) => b.updatedAt-a.updatedAt).slice(0,3); const rail = $('.recent');
-      recent.forEach(record => { const item = document.createElement('div'); item.className = 'wineitem'; const wine = record.wines?.[0]; item.innerHTML = `<strong>${safe(record.type === 'session' ? record.name : wine?.name || record.name)}</strong>${safe(dateText(record.updatedAt || record.createdAt))}`; item.onclick = () => showRecord(record.id); item.style.cursor = 'pointer'; rail?.after(item); });
+      recent.forEach(record => { const item = document.createElement('div'); item.className = 'wineitem'; const wine = record.wines?.[0]; item.innerHTML = `<strong>${safe(record.type === 'session' ? record.name : wine?.name || record.name)}</strong>${safe(dateText(record.updatedAt || record.createdAt))}`; item.onclick = () => showRecord(record.id); item.style.cursor = 'pointer'; rail?.after(item); }); await showDashboard();
     } catch { toast('Device storage is unavailable in this browser.'); }
   }
   init();
