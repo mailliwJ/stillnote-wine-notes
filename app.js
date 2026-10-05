@@ -94,7 +94,7 @@
     stage = Math.max(0, Math.min(index, order.length - 1));
     const active = order[stage];
     $$('.stage-card').forEach(x => x.style.display = x.id === active ? 'block' : 'none');
-    $('#setupCard').style.display = 'none'; $('#libraryView').style.display = 'none'; $('#columns').style.display = 'grid'; $('#progress').style.display = 'flex';
+    $('#setupCard').style.display = 'none'; if ($('#libraryView')) $('#libraryView').style.display = 'none'; $('#columns').style.display = 'grid'; $('#progress').style.display = 'flex';
     $('#aside').style.display = active === 'appearance' ? '' : 'none'; $('#columns').style.gridTemplateColumns = active === 'appearance' ? 'minmax(0,1fr) 300px' : '1fr';
     $('#progress').innerHTML = order.map((id, i) => `<button class="step ${i < stage ? 'done' : i === stage ? 'current' : ''}" data-index="${i}" aria-label="${LABELS[id]}"><span class="num">${i + 1}</span><span class="text">${LABELS[id]}</span></button>`).join('');
     $$('.step').forEach(b => b.onclick = () => showStage(Number(b.dataset.index)));
@@ -143,7 +143,7 @@
     panel.innerHTML = `<div class="eyebrow">Saved privately on this device</div><h2>${safe(message)}</h2><p class="sub">Your note stays in this browser. It won’t sync to other devices.</p><div class="actions" style="margin-top:18px">${buttons}</div>`;
   }
   function resetToSetup() {
-    $('#donePanel')?.remove(); $('#libraryView').style.display = 'none'; $('#setupCard').style.display = 'block'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none';
+    $('#donePanel')?.remove(); if ($('#libraryView')) $('#libraryView').style.display = 'none'; $('#setupCard').style.display = 'block'; $('#columns').style.display = 'none'; $('#progress').style.display = 'none'; $('#stageNav').style.display = 'none';
     restoreWine(null); order = []; mode = 'single'; timing = 'before'; currentSession = null; sessionBadge('New tasting');
     $$('#modeChoices .pill').forEach(x => x.classList.toggle('selected', x.dataset.mode === 'single'));
     $$('#identityTiming .pill').forEach(x => x.classList.toggle('selected', x.dataset.timing === 'before'));
